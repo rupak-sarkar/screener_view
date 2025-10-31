@@ -2,22 +2,23 @@ name: Generate and Commit CSV
 
 on:
   schedule:
-    # Runs every day at 00:00 UTC
+    # Runs every day at midnight UTC
     - cron: "0 0 * * *"
-  workflow_dispatch:  # allows manual trigger
+  workflow_dispatch:
 
 permissions:
-  contents: write  # allow push access
+  contents: write
 
 jobs:
   generate-csv:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout target branch
+      - name: Checkout main branch
         uses: actions/checkout@v4
         with:
-          ref: data-updates   # branch to update or create
+          ref: main
+          fetch-depth: 0  # fetch full history so we can branch off
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -26,6 +27,16 @@ jobs:
 
       - name: Run Python script
         run: python create_csv.py
+
+      - name: Switch/create data-updates branch
+        run: |
+          git fetch origin || true
+          if git rev-parse --verify origin/data-updates >/dev/null 2>&1; then
+            git checkout data-updates
+            git pull origin data-updates
+          else
+            git checkout -b data-updates
+          fi
 
       - name: Commit and push CSV to data-updates branch
         run: |
