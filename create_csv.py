@@ -20,6 +20,7 @@ for ticker in tickers:
     if not data.empty:
         data.reset_index(inplace=True)
         data['Ticker'] = ticker
+        # Keep only required columns
         data = data[['Date', 'Ticker', 'Open', 'High', 'Low', 'Close', 'Volume']]
         all_data.append(data)
 
@@ -29,6 +30,8 @@ if all_data:
     final_df.rename(columns={'Date': 'date'}, inplace=True)
     final_df['date'] = final_df['date'].dt.strftime('%m/%d/%Y')  # Format date
     final_df = final_df.round(2)  # Round numeric values
+
+    # Save to CSV
     final_df.to_csv(output_file, index=False)
     print(f"✅ Saved {len(final_df)} rows to {output_file}")
 else:
