@@ -30,7 +30,8 @@ jobs:
         run: ls -l data
 
       - name: Upload CSV artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: generated-csv
           path: data/*.csv
+``
