@@ -26,14 +26,22 @@ jobs:
         python -m pip install --upgrade pip
         pip install pandas
 
-    - name: Generate numbers CSV
+    - name: Create Python script
       run: |
-        echo "import pandas as pd
-data = {'Number': list(range(1, 11))}
-df = pd.DataFrame(data)
-df.to_csv('numbers.csv', index=False)
-print('✅ CSV file created successfully')" > generate_numbers.py
-        python generate_numbers.py
+        cat << 'EOF' > generate_numbers.py
+        import pandas as pd
+
+        # Generate numbers 1 to 10
+        data = {'Number': list(range(1, 11))}
+        df = pd.DataFrame(data)
+
+        # Save to CSV
+        df.to_csv('numbers.csv', index=False)
+        print("✅ CSV file created successfully")
+        EOF
+
+    - name: Run Python script
+      run: python generate_numbers.py
 
     - name: Commit and push changes
       run: |
