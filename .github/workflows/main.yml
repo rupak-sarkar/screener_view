@@ -25,3 +25,12 @@ jobs:
 
       - name: Run Python script
         run: python create_csv.py
+
+      - name: Verify CSV creation
+        run: ls -l data
+
+      - name: Upload CSV artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: generated-csv
+          path: data/*.csv
