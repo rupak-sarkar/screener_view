@@ -1,37 +1,44 @@
-name: Run Python Script on Schedule
+name: Generate Numbers CSV
 
 on:
   schedule:
-    # Runs every day at 00:00 UTC
-    - cron: "0 0 * * *"
-  workflow_dispatch:  # Allows manual run from the Actions tab
+    - cron: '0 1 * * *' # Runs daily at 1 AM UTC
+  workflow_dispatch: # Allows manual trigger
+
+permissions:
+  contents: write # Required for pushing changes
 
 jobs:
-  run-python:
+  generate-numbers:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+    - name: Checkout repository
+      uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
 
-      - name: Install dependencies (optional)
-        run: |
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pandas
 
-      - name: Run Python script
-        run: python create_csv.py
+    - name: Generate numbers CSV
+      run: |
+        echo "import pandas as pd
+data = {'Number': list(range(1, 11))}
+df = pd.DataFrame(data)
+df.to_csv('numbers.csv', index=False)
+print('✅ CSV file created successfully')" > generate_numbers.py
+        python generate_numbers.py
 
-      - name: Verify CSV creation
-        run: ls -l data
-
-      - name: Upload CSV artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: generated-csv
-          path: data/*.csv
-
+    - name: Commit and push changes
+      run: |
+        git config --global user.name "github-actions[bot]"
+        git config --global user.email "github-actions[bot]@users.noreply.github.com"
+        git add numbers.csv
+        git commit -m "Automated generation of numbers CSV" || echo "No changes to commit"
+        git push
