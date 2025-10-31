@@ -1,4 +1,4 @@
-name: Generate Numbers CSV
+name: Run create_csv.py and Save Output
 
 on:
   schedule:
@@ -9,7 +9,7 @@ permissions:
   contents: write # Required for pushing changes
 
 jobs:
-  generate-numbers:
+  run-script:
     runs-on: ubuntu-latest
 
     steps:
@@ -24,29 +24,15 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install pandas
-
-    - name: Create Python script
-      run: |
-        cat << 'EOF' > generate_numbers.py
-        import pandas as pd
-
-        # Generate numbers 1 to 10
-        data = {'Number': list(range(1, 11))}
-        df = pd.DataFrame(data)
-
-        # Save to CSV
-        df.to_csv('numbers.csv', index=False)
-        print("✅ CSV file created successfully")
-        EOF
+        pip install pandas yfinance  # Add any other dependencies your script needs
 
     - name: Run Python script
-      run: python generate_numbers.py
+      run: python create_csv.py
 
     - name: Commit and push changes
       run: |
         git config --global user.name "github-actions[bot]"
         git config --global user.email "github-actions[bot]@users.noreply.github.com"
-        git add numbers.csv
-        git commit -m "Automated generation of numbers CSV" || echo "No changes to commit"
+        git add .
+        git commit -m "Automated CSV generation from create_csv.py" || echo "No changes to commit"
         git push
