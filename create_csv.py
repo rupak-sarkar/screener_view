@@ -40,7 +40,7 @@ tickers = [
     "WINDLAS.NS", "ZENTEC.NS", "ZENSARTECH.NS", "ZFCVINDIA.NS", "ZYDUSLIFE.NS"
 ]
 end_date = datetime.now().date()
-start_date = end_date - timedelta(days=365)
+start_date = end_date - timedelta(days=1)
 output_file = 'stock_data_last_2_days.csv'
 
 final_df=pd.DataFrame()
