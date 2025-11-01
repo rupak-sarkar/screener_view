@@ -17,7 +17,7 @@ for ticker in tickers:
         df['Ticker'] = ticker
         df = df[['Date', 'Ticker', 'Open', 'High', 'Low', 'Close', 'Volume']]
         final_df=pd.concat([final_df,df])
-if final_df:
+if not final_df.empty:
     final_df.to_csv(output_file, index=False)
     print(f"✅ Saved {len(final_df)} rows to {output_file}")
 else:
