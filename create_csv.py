@@ -51,6 +51,7 @@ for ticker in tickers:
         df.columns=df.columns.get_level_values("Price")
         df['Ticker'] = ticker
         df = df[['Date', 'Ticker', 'Open', 'High', 'Low', 'Close', 'Volume']]
+        df[['Open', 'High', 'Low', 'Close']] = df[['Open', 'High', 'Low', 'Close']].round(2)
         final_df=pd.concat([final_df,df])
 if not final_df.empty:
     final_df.to_csv(output_file, mode='a', header=not os.path.exists(output_file), index=False)
