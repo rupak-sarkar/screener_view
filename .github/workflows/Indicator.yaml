@@ -23,7 +23,7 @@ jobs:
           pip install pandas numpy
 
       - name: Run indicator script
-        run: create_indicators.py
+        run: python create_indicators.py
 
       - name: Commit and push updated CSV
         run: |
