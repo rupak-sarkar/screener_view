@@ -2,7 +2,7 @@ name: Update Stock Indicators Daily
 
 on:
   schedule:
-    - cron: '30 1 * * *'  # Runs daily at 1:30 UTC
+    - cron: '30 1 * * *'  # Every day at 1:30 UTC
   workflow_dispatch:
 
 jobs:
@@ -23,7 +23,7 @@ jobs:
           pip install pandas numpy
 
       - name: Run indicator script
-        run: python create_indicators.py
+        run: create_indicators.py
 
       - name: Commit and push updated CSV
         run: |
