@@ -1,19 +1,18 @@
 import pandas as pd
 import numpy as np
 from pandas.tseries.offsets import BDay
-import os
 
-# Define file paths relative to script location
-input_file = "stock_data_last_2_days.csv"
-output_file = "stock_data_with_indicators.csv"
+# Load the CSV
+df = pd.read_csv("stock_data_last_2_days.csv", parse_dates=["Date"])
 
-# Load the CSV file
-df = pd.read_csv(input_file, parse_dates=["Date"])
+# Ensure numeric types
+for col in ["Open", "High", "Low", "Close", "Volume"]:
+    df[col] = pd.to_numeric(df[col], errors="coerce")
 
-# Sort by Ticker and Date
+# Sort
 df.sort_values(by=["Ticker", "Date"], inplace=True)
 
-# Generate 26 future business days per ticker
+# Append 26 future business days
 future_days = 26
 tickers = df["Ticker"].unique()
 latest_date = df["Date"].max()
@@ -22,7 +21,6 @@ future_rows = pd.DataFrame([(date, ticker) for ticker in tickers for date in fut
 for col in ["Open", "High", "Low", "Close", "Volume"]:
     future_rows[col] = np.nan
 
-# Append future rows
 df_extended = pd.concat([df, future_rows], ignore_index=True)
 df_extended.sort_values(by=["Ticker", "Date"], inplace=True)
 
@@ -35,15 +33,16 @@ def compute_indicators(group):
     group["BB_Lower"] = group["SMA_22"] - 2 * group["STD_22"]
 
     group["BB_Flag"] = np.where(
+        (group["Close"].notna()) & (group["Open"].notna()) & (group["BB_Upper"].notna()) &
         (group[["Close", "Open"]].max(axis=1) > group["BB_Upper"]),
         "BBH",
         np.where(
+            (group["Close"].notna()) & (group["Open"].notna()) & (group["BB_Lower"].notna()) &
             (group[["Close", "Open"]].min(axis=1) < group["BB_Lower"]),
             "BBL",
             np.nan
         )
     )
-    group.loc[group[["Close", "Open", "BB_Upper", "BB_Lower"]].isnull().any(axis=1), "BB_Flag"] = np.nan
 
     delta = group["Close"].diff()
     gain = np.where(delta > 0, delta, 0)
@@ -64,5 +63,5 @@ def compute_indicators(group):
 
 df_final = df_extended.groupby("Ticker", group_keys=False).apply(compute_indicators)
 
-# Save to CSV in the same repo location
-df_final.to_csv(output_file, index=False)
+# Save output to same folder
+df_final.to_csv("stock_data_with_indicators.csv", index=False)
