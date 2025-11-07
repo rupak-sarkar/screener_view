@@ -33,7 +33,7 @@ df_scraped = df_scraped.drop_duplicates(subset='Final Ticker')
 # Step 2: Fetch stock data using yfinance
 tickers = df_scraped['Final Ticker'].tolist()
 end_date = datetime.now().date()
-start_date = end_date - timedelta(days=1)
+start_date = end_date - timedelta(days=365)
 output_file = 'stock_data_last_2_days.csv'
 
 final_df = pd.DataFrame()
