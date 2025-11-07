@@ -1,61 +1,57 @@
-import yfinance as yf
+import requests
+from bs4 import BeautifulSoup
 import pandas as pd
 from datetime import datetime, timedelta
+import yfinance as yf
 import os
+import time
 
-tickers = [
-    "360ONE.NS", "ABB.NS", "AADHARHFC.NS", "ABBOTINDIA.NS", "ACCELYA.NS", "ACE.NS", "ACUTAAS.NS", "ABSLAMC.NS",
-    "ABCAPITAL.NS", "AGI.NS", "AHLUCONT.NS", "AIAENG.NS", "AJAXENGG.NS", "AKZOINDIA.NS", "ALIVUS.NS", "ALKEM.NS",
-    "ALLDIGI.NS", "AMBUJACEM.NS", "ANANDRATHI.NS", "ANGELONE.NS", "ANTHEM.NS", "APARINDS.NS", "ARIES.NS", "ARVSMART.NS",
-    "ASKAUTOLTD.NS", "AIIL.NS", "AVALON.NS", "AVANTIFEED.NS", "DMART.NS", "AXISBANK.NS", "BAJFINANCE.NS", "BAJAJFINSV.NS",
-    "BAJAJHLDNG.NS", "BALKRISIND.NS", "BANCOINDIA.NS", "BDL.NS", "BEL.NS", "BIKAJI.NS", "BSOFT.NS", "BLS.NS", "BLUEJET.NS",
-    "BLUESTARCO.NS", "BOSCHLTD.NS", "BRITANNIA.NS", "CAMS.NS", "CANFINHOME.NS", "CANBK.NS", "CAPLIPOINT.NS",
-    "CARERATING.NS", "CASTROLIND.NS", "CEATLTD.NS", "CERA.NS", "CLSEL.NS", "CHOLAHLDNG.NS", "CHOLAFIN.NS", "CIEINDIA.NS",
-    "CIGNITITEC.NS", "CIPLA.NS", "CMSINFO.NS", "COALINDIA.NS", "COCHINSHIP.NS", "COFORGE.NS", "COLPAL.NS",
-    "CONCORDBIO.NS", "CONTROLPR.NS", "CRISIL.NS", "CSBBANK.NS", "CUMMINSIND.NS", "CYIENT.NS", "DBCORP.NS",
-    "DATAPATTNS.NS", "DENTA.NS", "DIFFNKG.NS", "DODLA.NS", "LALPATHLAB.NS", "DRREDDY.NS", "DYCL.NS", "ECLERX.NS",
-    "EICHERMOT.NS", "EIHAHOTELS.NS", "ELECON.NS", "ENDURANCE.NS", "ENGINERSIN.NS", "EIEL.NS", "EPIGRAL.NS",
-    "ESABINDIA.NS", "ESCORTS.NS", "FDC.NS", "FEDERALBNK.NS", "FIEMIND.NS", "FINCABLES.NS", "GMDCLTD.NS", "GALAPREC.NS",
-    "GRSE.NS", "GARUDA.NS", "GRWRHITECH.NS", "GARFIBRES.NS", "GESHIP.NS", "GVT&T.NS", "GICRE.NS", "GEOJITFSL.NS",
-    "GILLETTE.NS", "MEDANTA.NS", "GODFRYPHLP.NS", "GOLDIAM.NS", "GRANULES.NS", "GRAVITA.NS", "GPPL.NS", "GULFOILLUB.NS",
-    "HUDCO.NS", "HCLTECH.NS", "HDFCAMC.NS", "HDFCBANK.NS", "HERITGFOOD.NS", "HEROMOTOCO.NS", "HEUBACHIND.NS", "HSCL.NS",
-    "HAL.NS", "HINDCOPPER.NS", "HOMEFIRST.NS", "HONDAPOWER.NS", "HYUNDAI.NS", "ICICIBANK.NS", "ICICIGI.NS", "ICRA.NS",
-    "IDBI.NS", "IIFLCAPS.NS", "INDIASHLTR.NS", "IREDA.NS", "INDRAMEDCO.NS", "INGERRAND.NS", "INNOVACAP.NS",
-    "INSECTICID.NS", "INTERARCH.NS", "IONEXCHANG.NS", "ISGEC.NS", "ITC.NS", "JBCHEPHARM.NS", "JGCHEM.NS", "JTLIND.NS",
-    "JLHL.NS", "JWL.NS", "KSL.NS", "KAMDHENU.NS", "KARURVYSYA.NS", "KSCL.NS", "KDDL.NS", "KEI.NS", "KKCL.NS",
-    "KFINTECH.NS", "KINGFA.NS", "KIRLOSBROS.NS", "KIRLPNU.NS", "KOVAI.NS", "KPITTECH.NS", "KSB.NS", "LGBBROSLTD.NS",
-    "LTFOODS.NS", "LTTS.NS", "LICHSGFIN.NS", "LINCOLN.NS", "LINDEINDIA.NS", "LODHA.NS", "M&MFIN.NS", "MAHSEAMLES.NS",
-    "MGL.NS", "MANINFRA.NS", "MARATHON.NS", "MARKSANS.NS", "MARUTI.NS", "MASTEK.NS", "MAXHEALTH.NS", "MAZDOCK.NS",
-    "MOIL.NS", "MOTILALOFS.NS", "MPHASIS.NS", "MPSLTD.NS", "MRF.NS", "BECTORFOOD.NS", "MCX.NS", "MUTHOOTFIN.NS",
-    "NATIONALUM.NS", "NAVA.NS", "NCC.NS", "NESCO.NS", "NESTLEIND.NS", "NEWGEN.NS", "NAM-INDIA.NS", "NUCLEUS.NS",
-    "NUVAMA.NS", "OFSS.NS", "PGHL.NS", "PIIND.NS", "PARAS.NS", "PERSISTENT.NS", "PETRONET.NS", "PHOENIXLTD.NS",
-    "POKARNA.NS", "POLYMED.NS", "POLYCAB.NS", "PFC.NS", "POWERMECH.NS", "PRICOLLTD.NS", "PRUDENT.NS", "RAILTEL.NS",
-    "RAJOOENG.NS", "RATEGAIN.NS", "RATNAMANI.NS", "RECLTD.NS", "RELIANCE.NS", "REPCOHOME.NS", "RPGLIFE.NS", "SPAL.NS",
-    "SAFARI.NS", "SAKSOFT.NS", "SANSERA.NS", "SAREGAMA.NS", "SBIN.NS", "SBILIFE.NS", "SCHAEFFLER.NS", "SHAKTIPUMP.NS",
-    "SHANKARA.NS", "SHANTIGEAR.NS", "SHARDAMOTR.NS", "SBCL.NS", "SHRIRAMFIN.NS", "SHRIPISTON.NS", "SIEMENS.NS",
-    "SIRCA.NS", "SRM.NS", "STYLAMIND.NS", "SUBROS.NS", "SUNDARMFIN.NS", "SUNDRMFAST.NS", "SUPRIYA.NS", "SURYAROSNI.NS",
-    "SWARAJENG.NS", "TAJGVK.NS", "TDPOWERSYS.NS", "TECHNOE.NS", "TEGA.NS", "THERMAX.NS", "TIMETECHNO.NS", "TIPSMUSIC.NS",
-    "TORNTPHARM.NS", "TORNTPOWER.NS", "TCI.NS", "TRANSRAILL.NS", "TRITURBINE.NS", "TVSHLTD.NS", "UNIONBANK.NS",
-    "UTIAMC.NS", "VGUARD.NS", "VENUSPIPES.NS", "VESUVIUS.NS", "VIJAYA.NS", "VISHNU.NS", "VOLTAMP.NS", "WELCORP.NS",
-    "WINDLAS.NS", "ZENTEC.NS", "ZENSARTECH.NS", "ZFCVINDIA.NS", "ZYDUSLIFE.NS"
-]
+# Step 1: Scrape tickers from Screener.in
+base_url = "https://www.screener.in/screens/2650136/good-stocks/?page="
+hrefs = []
+
+for page_num in range(1, 11):
+    url = base_url + str(page_num)
+    try:
+        response = requests.get(url)
+        response.raise_for_status()
+        soup = BeautifulSoup(response.content, 'html.parser')
+        for a_tag in soup.find_all('a', href=True):
+            href = a_tag['href']
+            if 'company' in href:
+                hrefs.append(href)
+        time.sleep(1)  # polite scraping
+    except Exception as e:
+        print(f"Error fetching page {page_num}: {e}")
+
+# Extract tickers
+df_scraped = pd.DataFrame(hrefs, columns=['Column1'])
+df_scraped['Company Name'] = df_scraped['Column1'].str.split('/').str[2]
+df_scraped['Final Ticker'] = df_scraped['Company Name'] + '.NS'
+df_scraped = df_scraped.drop_duplicates(subset='Final Ticker')
+
+# Step 2: Fetch stock data using yfinance
+tickers = df_scraped['Final Ticker'].tolist()
 end_date = datetime.now().date()
 start_date = end_date - timedelta(days=1)
 output_file = 'stock_data_last_2_days.csv'
 
-final_df=pd.DataFrame()
+final_df = pd.DataFrame()
 for ticker in tickers:
-    df = yf.download(ticker, start=start_date.strftime('%Y-%m-%d'), end=end_date.strftime('%Y-%m-%d'))
-    if not df.empty:
-        df = df.reset_index()
-        df.columns=df.columns.get_level_values("Price")
-        df['Ticker'] = ticker
-        df = df[['Date', 'Ticker', 'Open', 'High', 'Low', 'Close', 'Volume']]
-        df[['Open', 'High', 'Low', 'Close']] = df[['Open', 'High', 'Low', 'Close']].round(2)
-        final_df=pd.concat([final_df,df])
+    try:
+        df = yf.download(ticker, start=start_date.strftime('%Y-%m-%d'), end=end_date.strftime('%Y-%m-%d'))
+        if not df.empty:
+            df = df.reset_index()
+            df['Ticker'] = ticker
+            df = df[['Date', 'Ticker', 'Open', 'High', 'Low', 'Close', 'Volume']]
+            df[['Open', 'High', 'Low', 'Close']] = df[['Open', 'High', 'Low', 'Close']].round(2)
+            final_df = pd.concat([final_df, df])
+    except Exception as e:
+        print(f"Error fetching data for {ticker}: {e}")
+
+# Step 3: Save to CSV
 if not final_df.empty:
     final_df.to_csv(output_file, mode='a', header=not os.path.exists(output_file), index=False)
     print(f"✅ Saved {len(final_df)} rows to {output_file}")
 else:
     print("⚠️ No data fetched (check network or ticker symbols)")
-
