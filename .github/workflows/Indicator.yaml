@@ -4,6 +4,9 @@ on:
   schedule:
     - cron: '30 1 * * *'  # Every day at 1:30 UTC
   workflow_dispatch:
+  
+permissions:
+  contents: write
 
 jobs:
   update-indicators:
