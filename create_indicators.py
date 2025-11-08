@@ -1,67 +1,94 @@
 import pandas as pd
 import numpy as np
 from pandas.tseries.offsets import BDay
+from datetime import date
 
+# Get the current local date
+today = date.today()
+ 
 # Load the CSV
 df = pd.read_csv("stock_data_last_2_days.csv", parse_dates=["Date"])
-
+ 
 # Ensure numeric types
 for col in ["Open", "High", "Low", "Close", "Volume"]:
     df[col] = pd.to_numeric(df[col], errors="coerce")
-
+ 
 # Sort
 df.sort_values(by=["Ticker", "Date"], inplace=True)
-
+ 
 # Append 26 future business days
 future_days = 26
 tickers = df["Ticker"].unique()
-latest_date = df["Date"].max()
+latest_date = today
 future_dates = pd.date_range(start=latest_date + BDay(1), periods=future_days, freq=BDay())
 future_rows = pd.DataFrame([(date, ticker) for ticker in tickers for date in future_dates], columns=["Date", "Ticker"])
 for col in ["Open", "High", "Low", "Close", "Volume"]:
     future_rows[col] = np.nan
-
+ 
 df_extended = pd.concat([df, future_rows], ignore_index=True)
 df_extended.sort_values(by=["Ticker", "Date"], inplace=True)
+#assigning index 
+df_extended['index'] = df_extended.groupby('Ticker').cumcount() + 1
+df_extended['SMA_9'] = (
+    df_extended.sort_values(['Ticker', 'index'])
+      .groupby('Ticker')['Close']
+      .transform(lambda x: x.rolling(window=9).mean())
+)
+df_extended['SMA_22'] = (
+    df_extended.sort_values(['Ticker', 'index'])
+      .groupby('Ticker')['Close']
+      .transform(lambda x: x.rolling(window=22).mean())
+)
+df_extended["STD_22"] = (
+    df_extended.sort_values(['Ticker', 'index'])
+      .groupby('Ticker')['Close']
+      .transform(lambda x: x.rolling(window=22).std())
+)
+df_extended['SMA_52'] = (
+    df_extended.sort_values(['Ticker', 'index'])
+      .groupby('Ticker')['Close']
+      .transform(lambda x: x.rolling(window=52).mean())
+)
+df_extended['SMA_200'] = (
+    df_extended.sort_values(['Ticker', 'index'])
+      .groupby('Ticker')['Close']
+      .transform(lambda x: x.rolling(window=200).mean())
+)
 
-# Compute indicators
-def compute_indicators(group):
-    group = group.copy()
-    group["SMA_22"] = group["Close"].rolling(window=22, min_periods=1).mean()
-    group["STD_22"] = group["Close"].rolling(window=22, min_periods=1).std()
-    group["BB_Upper"] = group["SMA_22"] + 2 * group["STD_22"]
-    group["BB_Lower"] = group["SMA_22"] - 2 * group["STD_22"]
-
-    group["BB_Flag"] = np.where(
-        (group["Close"].notna()) & (group["Open"].notna()) & (group["BB_Upper"].notna()) &
-        (group[["Close", "Open"]].max(axis=1) > group["BB_Upper"]),
-        "BBH",
-        np.where(
-            (group["Close"].notna()) & (group["Open"].notna()) & (group["BB_Lower"].notna()) &
-            (group[["Close", "Open"]].min(axis=1) < group["BB_Lower"]),
-            "BBL",
-            np.nan
-        )
-    )
-
-    delta = group["Close"].diff()
-    gain = np.where(delta > 0, delta, 0)
-    loss = np.where(delta < 0, -delta, 0)
-    avg_gain = pd.Series(gain).rolling(window=14, min_periods=1).mean()
-    avg_loss = pd.Series(loss).rolling(window=14, min_periods=1).mean()
+def compute_rsi(close, period=14):
+    delta = close.diff()
+    gain = delta.clip(lower=0)
+    loss = -delta.clip(upper=0)
+    avg_gain = gain.rolling(window=period).mean()
+    avg_loss = loss.rolling(window=period).mean()
     rs = avg_gain / avg_loss
-    rsi = 100 - (100 / (1 + rs))
-    group["RSI_14"] = rsi.where(np.isfinite(rsi), np.nan)
+    return 100 - (100 / (1 + rs))
 
+df_extended['RSI_14'] = (
+    df_extended.groupby('Ticker')['Close']
+      .transform(lambda x: compute_rsi(x, period=14))
+)
+df_extended["BB_Upper"] = df_extended["SMA_22"] + 2 * df_extended["STD_22"]
+df_extended["BB_Lower"] = df_extended["SMA_22"] - 2 * df_extended["STD_22"]
+
+
+def bollinger_flag(row):
+    if pd.isna(row['BB_Upper']) or pd.isna(row['BB_Lower']):
+        return np.nan
+    elif row['Close'] > row['BB_Upper']:
+        return "BBH"
+    elif row['Close'] < row['BB_Lower']:
+        return 'BBL'
+    else:
+        return np.nan
+        
+df_extended['BB_Flag'] = df_extended.apply(bollinger_flag, axis=1)
+
+def compute_senkou(group):
     conv_line = (group["High"].rolling(window=9, min_periods=1).max() + group["Low"].rolling(window=9, min_periods=1).min()) / 2
     base_line = (group["High"].rolling(window=26, min_periods=1).max() + group["Low"].rolling(window=26, min_periods=1).min()) / 2
     group["Senkou_Span_A"] = ((conv_line + base_line) / 2).shift(26)
-    span_b = (group["High"].rolling(window=52, min_periods=1).max() + group["Low"].rolling(window=52, min_periods=1).min()) / 2
-    group["Senkou_Span_B"] = span_b.shift(26)
-
     return group
 
-df_final = df_extended.groupby("Ticker", group_keys=False).apply(compute_indicators)
-
-# Save output to same folder
-df_final.to_csv("stock_data_with_indicators.csv", index=False)
+df_extended = df_extended.groupby("Ticker").apply(compute_senkou)
+df_extended.to_csv("stock_data_with_indicators.csv",index=False)
