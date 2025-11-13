@@ -37,17 +37,17 @@ df_extended['SMA_9'] = (
 df_extended['SMA_22'] = (
     df_extended.sort_values(['Ticker', 'index'])
       .groupby('Ticker')['Close']
-      .transform(lambda x: x.rolling(window=22).mean())
+      .transform(lambda x: x.rolling(window=20).mean())
 )
 df_extended["STD_22"] = (
     df_extended.sort_values(['Ticker', 'index'])
       .groupby('Ticker')['Close']
-      .transform(lambda x: x.rolling(window=22).std())
+      .transform(lambda x: x.rolling(window=20).std())
 )
 df_extended['SMA_52'] = (
     df_extended.sort_values(['Ticker', 'index'])
       .groupby('Ticker')['Close']
-      .transform(lambda x: x.rolling(window=52).mean())
+      .transform(lambda x: x.rolling(window=50).mean())
 )
 df_extended['SMA_200'] = (
     df_extended.sort_values(['Ticker', 'index'])
@@ -55,7 +55,7 @@ df_extended['SMA_200'] = (
       .transform(lambda x: x.rolling(window=200).mean())
 )
 
-def compute_rsi(close, period=14):
+def compute_rsi(close, period=20):
     delta = close.diff()
     gain = delta.clip(lower=0)
     loss = -delta.clip(upper=0)
@@ -66,10 +66,10 @@ def compute_rsi(close, period=14):
 
 df_extended['RSI_14'] = (
     df_extended.groupby('Ticker')['Close']
-      .transform(lambda x: compute_rsi(x, period=14))
+      .transform(lambda x: compute_rsi(x, period=20))
 )
-df_extended["BB_Upper"] = df_extended["SMA_22"] + 2 * df_extended["STD_22"]
-df_extended["BB_Lower"] = df_extended["SMA_22"] - 2 * df_extended["STD_22"]
+df_extended["BB_Upper"] = df_extended["SMA_20"] + 2 * df_extended["STD_20"]
+df_extended["BB_Lower"] = df_extended["SMA_20"] - 2 * df_extended["STD_20"]
 
 
 def bollinger_flag(row):
@@ -86,8 +86,8 @@ df_extended['BB_Flag'] = df_extended.apply(bollinger_flag, axis=1)
 
 def compute_senkou(group):
     conv_line = (group["High"].rolling(window=9, min_periods=1).max() + group["Low"].rolling(window=9, min_periods=1).min()) / 2
-    base_line = (group["High"].rolling(window=26, min_periods=1).max() + group["Low"].rolling(window=26, min_periods=1).min()) / 2
-    group["Senkou_Span_A"] = ((conv_line + base_line) / 2).shift(26)
+    base_line = (group["High"].rolling(window=20, min_periods=1).max() + group["Low"].rolling(window=20, min_periods=1).min()) / 2
+    group["Senkou_Span_A"] = ((conv_line + base_line) / 2).shift(20)
     return group
 
 df_extended = df_extended.groupby("Ticker").apply(compute_senkou)
