@@ -85,10 +85,21 @@ def bollinger_flag(row):
 df_extended['BB_Flag'] = df_extended.apply(bollinger_flag, axis=1)
 
 def compute_senkou(group):
+    # Conversion Line (Tenkan-sen)
     conv_line = (group["High"].rolling(window=9, min_periods=1).max() + group["Low"].rolling(window=9, min_periods=1).min()) / 2
+    
+    # Base Line (Kijun-sen)
     base_line = (group["High"].rolling(window=20, min_periods=1).max() + group["Low"].rolling(window=20, min_periods=1).min()) / 2
+    
+    # Senkou Span A (Leading Span A)
     group["Senkou_Span_A"] = ((conv_line + base_line) / 2).shift(20)
+    
+    # Senkou Span B (Leading Span B)
+    span_b = (group["High"].rolling(window=50, min_periods=1).max() + group["Low"].rolling(window=52, min_periods=1).min()) / 2
+    group["Senkou_Span_B"] = span_b.shift(20)
+    
     return group
+
 
 df_extended = df_extended.groupby("Ticker").apply(compute_senkou)
 df_extended.to_csv("stock_data_with_indicators.csv",index=False)
