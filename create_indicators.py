@@ -101,7 +101,7 @@ def compute_senkou(group):
     return group
 
 
-df_extended = df_extended.groupby("Ticker").apply(compute_senkou)
+df_extended = df_extended.groupby("Ticker").apply(compute_senkou).reset_index(drop=True)
 
 def compute_knoxville_divergence(group, rsi_period=14, momentum_period=20):
     # RSI (already computed, but recompute for clarity)
