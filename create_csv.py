@@ -36,7 +36,6 @@ start_date = end_date - timedelta(days=365)
 output_file = 'stock_data_last_2_days.csv'
 
 final_df = pd.DataFrame()
-
 usd_to_inr = 83.0  # Approx conversion rate
 
 for ticker in tickers:
@@ -50,13 +49,19 @@ for ticker in tickers:
             df = df[['Date', 'Ticker', 'Open', 'High', 'Low', 'Close', 'Volume']]
             df[['Open', 'High', 'Low', 'Close']] = df[['Open', 'High', 'Low', 'Close']].round(2)
 
-            # Fetch additional info for Market Cap, Debt/Equity, Industry
+            # Fetch additional info
             stock = yf.Ticker(ticker)
             info = stock.info
             market_cap = info.get('marketCap', None)
-            total_debt = info.get('totalDebt', None)
-            total_equity = info.get('totalStockholderEquity', None)
             industry = info.get('industry', None)
+
+            # Get balance sheet for Debt/Equity
+            balance_sheet = stock.balance_sheet
+            if not balance_sheet.empty:
+                total_debt = balance_sheet.loc['Total Liabilities'][0] if 'Total Liabilities' in balance_sheet.index else None
+                total_equity = balance_sheet.loc['Total Stockholder Equity'][0] if 'Total Stockholder Equity' in balance_sheet.index else None
+            else:
+                total_debt, total_equity = None, None
 
             # Calculate Debt/Equity Ratio
             debt_equity_ratio = round(total_debt / total_equity, 2) if total_debt and total_equity and total_equity != 0 else None
