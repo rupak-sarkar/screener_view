@@ -95,7 +95,7 @@ def compute_senkou(group):
     group["Senkou_Span_A"] = ((conv_line + base_line) / 2).shift(20)
     
     # Senkou Span B (Leading Span B)
-    span_b = (group["High"].rolling(window=50, min_periods=1).max() + group["Low"].rolling(window=52, min_periods=1).min()) / 2
+    span_b = (group["High"].rolling(window=50, min_periods=1).max() + group["Low"].rolling(window=50, min_periods=1).min()) / 2
     group["Senkou_Span_B"] = span_b.shift(20)
     
     return group
@@ -143,5 +143,8 @@ def compute_knoxville_divergence(group, rsi_period=14, momentum_period=20):
     return group
 
 # Apply to each ticker group
-df_extended = df_extended.groupby('Ticker').apply(compute_knoxville_divergence)
-df_extended.to_csv("stock_data_with_indicators.csv",index=False)
+df_extended = df_extended.groupby('Ticker').apply(compute_knoxville_divergence).reset_index(drop=True)
+
+# Save to CSV
+df_extended.to_csv("stock_data_with_indicators.csv", index=False)
+
