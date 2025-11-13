@@ -55,7 +55,7 @@ df_extended['SMA_200'] = (
       .transform(lambda x: x.rolling(window=200).mean())
 )
 
-def compute_rsi(close, period=20):
+def compute_rsi(close, period=14):
     delta = close.diff()
     gain = delta.clip(lower=0)
     loss = -delta.clip(upper=0)
@@ -66,7 +66,7 @@ def compute_rsi(close, period=20):
 
 df_extended['RSI_14'] = (
     df_extended.groupby('Ticker')['Close']
-      .transform(lambda x: compute_rsi(x, period=20))
+      .transform(lambda x: compute_rsi(x, period=14))
 )
 df_extended["BB_Upper"] = df_extended["SMA_22"] + 2 * df_extended["STD_22"]
 df_extended["BB_Lower"] = df_extended["SMA_22"] - 2 * df_extended["STD_22"]
