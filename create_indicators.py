@@ -102,4 +102,46 @@ def compute_senkou(group):
 
 
 df_extended = df_extended.groupby("Ticker").apply(compute_senkou)
+
+def compute_knoxville_divergence(group, rsi_period=14, momentum_period=20):
+    # RSI (already computed, but recompute for clarity)
+    delta = group['Close'].diff()
+    gain = delta.clip(lower=0)
+    loss = -delta.clip(upper=0)
+    avg_gain = gain.rolling(window=rsi_period).mean()
+    avg_loss = loss.rolling(window=rsi_period).mean()
+    rs = avg_gain / avg_loss
+    rsi = 100 - (100 / (1 + rs))
+
+    # Momentum
+    momentum = group['Close'] - group['Close'].shift(momentum_period)
+
+    # Knoxville Divergence logic
+    divergence_flag = []
+    start_price = None
+    end_price = None
+
+    for i in range(len(group)):
+        if rsi.iloc[i] < 30 and momentum.iloc[i] > 0:  # Bullish divergence start
+            start_price = group['Close'].iloc[i]
+            divergence_flag.append('Bullish Start')
+        elif start_price and momentum.iloc[i] < 0:  # Bullish divergence end
+            end_price = group['Close'].iloc[i]
+            divergence_flag.append(f'Bullish End ({start_price}→{end_price})')
+            start_price = None
+        elif rsi.iloc[i] > 70 and momentum.iloc[i] < 0:  # Bearish divergence start
+            start_price = group['Close'].iloc[i]
+            divergence_flag.append('Bearish Start')
+        elif start_price and momentum.iloc[i] > 0:  # Bearish divergence end
+            end_price = group['Close'].iloc[i]
+            divergence_flag.append(f'Bearish End ({start_price}→{end_price})')
+            start_price = None
+        else:
+            divergence_flag.append(None)
+
+    group['Knoxville_Divergence'] = divergence_flag
+    return group
+
+# Apply to each ticker group
+df_extended = df_extended.groupby('Ticker').apply(compute_knoxville_divergence)
 df_extended.to_csv("stock_data_with_indicators.csv",index=False)
