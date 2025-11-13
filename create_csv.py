@@ -1,4 +1,3 @@
-
 import requests
 from bs4 import BeautifulSoup
 import pandas as pd
@@ -33,19 +32,48 @@ df_scraped = df_scraped.drop_duplicates(subset='Final Ticker')
 
 tickers = df_scraped['Final Ticker'].tolist()
 end_date = datetime.now().date()
-start_date = end_date - timedelta(days=1)
+start_date = end_date - timedelta(days=365)
 output_file = 'stock_data_last_2_days.csv'
 
-final_df=pd.DataFrame()
+final_df = pd.DataFrame()
+
+usd_to_inr = 83.0  # Approx conversion rate
+
 for ticker in tickers:
-    df = yf.download(ticker, start=start_date.strftime('%Y-%m-%d'), end=end_date.strftime('%Y-%m-%d'))
-    if not df.empty:
-        df = df.reset_index()
-        df.columns=df.columns.get_level_values("Price")
-        df['Ticker'] = ticker
-        df = df[['Date', 'Ticker', 'Open', 'High', 'Low', 'Close', 'Volume']]
-        df[['Open', 'High', 'Low', 'Close']] = df[['Open', 'High', 'Low', 'Close']].round(2)
-        final_df=pd.concat([final_df,df])
+    try:
+        # Download price data
+        df = yf.download(ticker, start=start_date.strftime('%Y-%m-%d'), end=end_date.strftime('%Y-%m-%d'))
+        if not df.empty:
+            df = df.reset_index()
+            df.columns = df.columns.get_level_values("Price")
+            df['Ticker'] = ticker
+            df = df[['Date', 'Ticker', 'Open', 'High', 'Low', 'Close', 'Volume']]
+            df[['Open', 'High', 'Low', 'Close']] = df[['Open', 'High', 'Low', 'Close']].round(2)
+
+            # Fetch additional info for Market Cap, Debt/Equity, Industry
+            stock = yf.Ticker(ticker)
+            info = stock.info
+            market_cap = info.get('marketCap', None)
+            total_debt = info.get('totalDebt', None)
+            total_equity = info.get('totalStockholderEquity', None)
+            industry = info.get('industry', None)
+
+            # Calculate Debt/Equity Ratio
+            debt_equity_ratio = round(total_debt / total_equity, 2) if total_debt and total_equity and total_equity != 0 else None
+
+            # Convert Market Cap to INR Crores
+            market_cap_cr = round((market_cap * usd_to_inr) / 10_000_000, 2) if market_cap else None
+
+            # Add new columns
+            df['MarketCap(Cr)'] = market_cap_cr
+            df['DebtEquityRatio'] = debt_equity_ratio
+            df['Industry'] = industry
+
+            final_df = pd.concat([final_df, df])
+    except Exception as e:
+        print(f"Error processing ticker {ticker}: {e}")
+
+# Save to CSV
 if not final_df.empty:
     final_df.to_csv(output_file, mode='a', header=not os.path.exists(output_file), index=False)
     print(f"✅ Saved {len(final_df)} rows to {output_file}")
