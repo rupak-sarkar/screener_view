@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Ticker Candles</title>
+  <link rel="stylesheet" href="style.css" />
+  <!-- Plotly for candlesticks -->
+  <script src="https://cdn.plot.ly/plotly-2.30.0.min.js"></script>
+  <!-- PapaParse to stream & parse CSV -->
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+</head>
+<body>
+  <div id="app">
+    <aside id="sidebar">
+      <div class="brand">📈 Ticker slicer</div>
+      <input id="search" type="search" placeholder="Search… (e.g., ACC.NS)" />
+      <div id="tickers" role="listbox" aria-label="Tickers"></div>
+      <div class="footer">
+        <label class="checkbox">
+          <input id="showVolume" type="checkbox" checked />
+          <span>Show volume</span>
+        </label>
+      </div>
+    </aside>
+
+    <main id="main">
+      <header id="chartHeader">
+        <h1 id="title">Select a ticker</h1>
+        <div id="dateRange"></div>
+      </header>
+      <div id="chart"></div>
+      <div id="status" class="status">Loading CSV…</div>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
