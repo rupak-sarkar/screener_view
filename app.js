@@ -11,10 +11,10 @@ const state = {
   showVolume: true
 };
 
-// CSV URL (raw GitHub link)
+// CSV URL
 const CSV_URL = "https://raw.githubusercontent.com/rupak-sarkar/screener_view/main/stock_data_with_indicators.csv";
 
-// Initialize app
+// Initialize
 function init() {
   Papa.parse(CSV_URL, {
     download: true,
@@ -25,18 +25,27 @@ function init() {
       state.rows = results.data;
       state.tickers = [...new Set(state.rows.map(r => r.Ticker))].sort();
       buildTickerSelector();
-      plotSelected(state.tickers[0]); // default first ticker
+      if (state.tickers.length) {
+        plotSelected(state.tickers[0]); // default first ticker
+      }
       el("status").textContent = "Loaded " + state.tickers.length + " tickers";
+    },
+    error: (err) => {
+      console.error("CSV load error:", err);
+      el("status").textContent = "Failed to load CSV.";
     }
   });
 
   // Reset Scale button
-  el("resetScale").addEventListener("click", () => {
-    Plotly.relayout("chart", {
-      "yaxis.autorange": true,
-      "yaxis2.autorange": true
+  const resetBtn = el("resetScale");
+  if (resetBtn) {
+    resetBtn.addEventListener("click", () => {
+      Plotly.relayout("chart", {
+        "yaxis.autorange": true,
+        "yaxis2.autorange": true
+      });
     });
-  });
+  }
 
   // Keyboard shortcut (R)
   document.addEventListener("keydown", (e) => {
@@ -49,15 +58,23 @@ function init() {
   });
 
   // Volume checkbox
-  el("showVolume").addEventListener("change", (e) => {
-    state.showVolume = e.target.checked;
-    plotSelected(state.selectedTicker);
-  });
+  const volChk = el("showVolume");
+  if (volChk) {
+    state.showVolume = volChk.checked;
+    volChk.addEventListener("change", (e) => {
+      state.showVolume = e.target.checked;
+      if (state.selectedTicker) plotSelected(state.selectedTicker);
+    });
+  }
 }
 
-// Build ticker selector (matches #tickers in HTML)
+// Build ticker selector
 function buildTickerSelector() {
   const selector = el("tickers");
+  if (!selector) {
+    console.error("Missing #tickers element in DOM");
+    return;
+  }
   selector.innerHTML = "";
   state.tickers.forEach(ticker => {
     const btn = document.createElement("button");
@@ -82,7 +99,7 @@ function plotSelected(ticker) {
 
   const data = [];
 
-  // Candlestick trace with Δ%
+  // Candlestick trace
   data.push({
     type: "candlestick",
     x,
@@ -112,12 +129,11 @@ function plotSelected(ticker) {
       name: "Volume",
       yaxis: "y2",
       opacity: 0.6,
-      hovertemplate:
-        "Volume: %{y:,}<extra></extra>"
+      hovertemplate: "Volume: %{y:,}<extra></extra>"
     });
   }
 
-  // Layout with unified hover + zoom presets
+  // Layout
   let layout = {
     dragmode: "pan",
     showlegend: false,
@@ -151,12 +167,12 @@ function plotSelected(ticker) {
     };
   }
 
-  Plotly.newPlot("chart", data, layout, { responsive: true, autosize: true });
+  Plotly.newPlot("chart", data, layout, { responsive: true });
 
   // Update header
   el("title").textContent = ticker;
   el("dateRange").textContent = x.length ? `${x[0]} → ${x[x.length - 1]}` : "";
 }
 
-// Run init
-init();
+// ✅ Run init only after DOM is ready
+document.addEventListener("DOMContentLoaded", init);
