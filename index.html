@@ -29,8 +29,15 @@
         <h1 id="title">Select a ticker</h1>
         <div id="dateRange"></div>
       </header>
-      <div id="chart"></div>
-      <div id="status" class="status">Loading CSV…</div>
+
+      <!-- Chart container with Reset Scale button -->
+      <div id="chartContainer" style="position: relative;">
+        <div id="chart"></div>
+        <button id="resetScale" title="Reset scale (Shortcut: R)">Reset Scale</button>
+      </div>
+
+      <!-- Status with accessibility -->
+      <div id="status" class="status" aria-live="polite">Loading CSV…</div>
     </main>
   </div>
 
