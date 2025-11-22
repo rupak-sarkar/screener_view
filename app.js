@@ -164,3 +164,4 @@ const fmtDate = (d) => d.toISOString().slice(0, 10);
     console.error(err);
     el('status').textContent = `Failed to load CSV: ${err?.message || err}`;
   }
+}
