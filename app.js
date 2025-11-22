@@ -7,8 +7,8 @@
     - Interactive slicer + Plotly candlestick + optional volume
 
 */
+const CSV_URL = "./stock_data_with_indicators.csv"; // This is correct
 
-const CSV_URL = "./stock_data_with_indicators.csv"; // same-folder fetch
 const el = (id) => document.getElementById(id);
 
 const state = {
@@ -26,7 +26,7 @@ function loadCSV() {
       header: true,
       dynamicTyping: true, // numbers become Number
       skipEmptyLines: true,
-      worker: true,
+      worker: false,
       chunk: (chunk) => {
         const rows = chunk.data;
         for (const r of rows) {
