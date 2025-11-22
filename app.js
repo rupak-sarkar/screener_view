@@ -251,7 +251,7 @@ const fmtDate = (d) => d.toISOString().slice(0, 10);
 
 // ---- Boot -------------------------------------------------------------------
 
-(async function init() {
+async function init() {
   try {
     el("status").textContent = "Loading CSV…";
 
@@ -269,5 +269,6 @@ const fmtDate = (d) => d.toISOString().slice(0, 10);
 
     el("status").textContent = `Failed to load CSV: ${err?.message || err}`;
   }
-});
+};
+await init();
  
