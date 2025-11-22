@@ -1,138 +1,82 @@
-/*  Ticker Candles - GitHub Pages
-
-    - Streams ./stock_data_with_indicators.csv
-
-    - Groups by Ticker
-
-    - Interactive slicer + Plotly candlestick + optional volume
-
-*/
-const CSV_URL = "./stock_data_with_indicators.csv"; // This is correct
-
-const el = (id) => document.getElementById(id);
-
-const state = {
-  tickers: [], // unique tickers
-  byTicker: new Map(), // ticker -> [{Date,Open,High,Low,Close,Volume}, ...sorted]
-  selected: null,
-  showVolume: true,
-};
-
-// ---- Parse CSV (streaming) --------------------------------------------------
-function loadCSV() {
-  return new Promise((resolve, reject) => {
-    Papa.parse(CSV_URL, {
-      download: true,
-      header: true,
-      dynamicTyping: true, // numbers become Number
-      skipEmptyLines: true,
-      worker: false,
-      chunk: (chunk) => {
-        const rows = chunk.data;
-        for (const r of rows) {
-          const tkr = (r.Ticker || "").trim();
-
-          // Filter out rows missing core OHLC or Date
-          const hasOHLC =
-            isFinite(r.Open) &&
-            isFinite(r.High) &&
-            isFinite(r.Low) &&
-            isFinite(r.Close);
-
-          if (!tkr || !r.Date || !hasOHLC) continue;
-
-          const rec = {
-            Date: new Date(r.Date), // expects YYYY-MM-DD
-            Open: +r.Open,
-            High: +r.High,
-            Low: +r.Low,
-            Close: +r.Close,
-            Volume: isFinite(r.Volume) ? +r.Volume : null,
-          };
-
-          if (!state.byTicker.has(tkr)) state.byTicker.set(tkr, []);
-          state.byTicker.get(tkr).push(rec);
-        }
-      },
-      complete: () => {
-        // sort each ticker by date ascending and collect list
-        for (const [tkr, arr] of state.byTicker.entries()) {
-          arr.sort((a, b) => a.Date - b.Date);
-        }
-        state.tickers = [...state.byTicker.keys()].sort();
-        resolve();
-      },
-      error: (err) => reject(err),
-    });
-  });
+// Utility to get element by id
+function el(id) {
+  return document.getElementById(id);
 }
 
-// ---- UI: build slicer & search ---------------------------------------------
-function buildSlicer() {
-  const wrap = el("tickers");
-  wrap.innerHTML = "";
-  for (const t of state.tickers) {
-    const div = document.createElement("div");
-    div.className = "ticker";
-    div.textContent = t;
-    div.dataset.ticker = t;
-    div.addEventListener("click", () => selectTicker(t));
-    wrap.appendChild(div);
-  }
+// Global state
+const state = {
+  rows: [],
+  tickers: [],
+  selectedTicker: null,
+  showVolume: true
+};
 
-  // live filter
-  el("search").addEventListener("input", (e) => {
-    const q = e.target.value.trim().toLowerCase();
-    for (const child of wrap.children) {
-      child.style.display = child.textContent.toLowerCase().includes(q)
-        ? ""
-        : "none";
+// CSV URL (raw GitHub link)
+const CSV_URL = "https://raw.githubusercontent.com/rupak-sarkar/screener_view/main/stock_data_with_indicators.csv";
+
+// Initialize app
+function init() {
+  Papa.parse(CSV_URL, {
+    download: true,
+    header: true,
+    dynamicTyping: true,
+    skipEmptyLines: true,
+    complete: (results) => {
+      state.rows = results.data;
+      state.tickers = [...new Set(state.rows.map(r => r.Ticker))].sort();
+      buildTickerSelector();
+      plotSelected(state.tickers[0]); // default first ticker
     }
   });
 
-  // show/hide volume
-  const chk = el("showVolume");
-  chk.addEventListener("change", () => {
-    state.showVolume = chk.checked;
-    plotSelected();
+  // Reset Scale button
+  el("resetScale").addEventListener("click", () => {
+    Plotly.relayout("chart", {
+      "yaxis.autorange": true,
+      "yaxis2.autorange": true
+    });
+  });
+
+  // Keyboard shortcut (R)
+  document.addEventListener("keydown", (e) => {
+    if (e.key.toLowerCase() === "r") {
+      Plotly.relayout("chart", {
+        "yaxis.autorange": true,
+        "yaxis2.autorange": true
+      });
+    }
   });
 }
 
-// ---- Select ticker + plot ---------------------------------------------------
-function selectTicker(ticker) {
-  state.selected = ticker;
-
-  // update active style
-  for (const child of el("tickers").children) {
-    child.classList.toggle("active", child.dataset.ticker === ticker);
-  }
-
-  plotSelected();
+// Build ticker selector
+function buildTickerSelector() {
+  const selector = el("tickerSelector");
+  selector.innerHTML = "";
+  state.tickers.forEach(ticker => {
+    const btn = document.createElement("button");
+    btn.textContent = ticker;
+    btn.className = "ticker-btn";
+    btn.onclick = () => plotSelected(ticker);
+    selector.appendChild(btn);
+  });
 }
 
-function plotSelected() {
-  const t = state.selected;
-  if (!t) return;
+// Plot selected ticker
+function plotSelected(ticker) {
+  state.selectedTicker = ticker;
+  const rows = state.rows.filter(r => r.Ticker === ticker);
 
-  const rows = state.byTicker.get(t) || [];
-  const x = rows.map((r) => r.Date);
-  const open = rows.map((r) => r.Open);
-  const high = rows.map((r) => r.High);
-  const low = rows.map((r) => r.Low);
-  const close = rows.map((r) => r.Close);
-  const vol = rows.map((r) => r.Volume ?? null);
+  const x = rows.map(r => r.Date);
+  const open = rows.map(r => r.Open);
+  const high = rows.map(r => r.High);
+  const low = rows.map(r => r.Low);
+  const close = rows.map(r => r.Close);
+  const vol = rows.map(r => r.Volume);
 
-  // compute range text
-  const first = rows[0]?.Date;
-  const last = rows[rows.length - 1]?.Date;
+  const data = [];
 
-  el("title").textContent = `${t} — Candlestick`;
-  el("dateRange").textContent =
-    first && last
-      ? `${fmtDate(first)} → ${fmtDate(last)} (${rows.length} bars)`
-      : "";
-
-  const candleTrace = {
+  // Candlestick trace with Δ%
+  data.push({
     type: "candlestick",
     x,
     open,
@@ -142,11 +86,16 @@ function plotSelected() {
     increasing: { line: { color: "#22d3ee" } },
     decreasing: { line: { color: "#ef4444" } },
     name: "Price",
-  };
+    hovertemplate:
+      "<b>Date:</b> %{x|%Y-%m-%d}<br>" +
+      "Open: %{open}<br>" +
+      "High: %{high}<br>" +
+      "Low: %{low}<br>" +
+      "Close: %{close}<br>" +
+      "Δ%: %{((close-open)/open*100).toFixed(2)}%<extra></extra>"
+  });
 
-  const data = [candleTrace];
-  let layout = {};
-
+  // Volume trace
   if (state.showVolume) {
     data.push({
       type: "bar",
@@ -156,61 +105,47 @@ function plotSelected() {
       name: "Volume",
       yaxis: "y2",
       opacity: 0.6,
+      hovertemplate:
+        "Volume: %{y:,}<extra></extra>"
     });
+  }
 
-    // safe volume axis range
-    const volVals = vol.filter((v) => v != null);
-    const maxVol = volVals.length ? Math.max(...volVals) : 1;
+  // Layout with unified hover + zoom presets
+  let layout = {
+    dragmode: "pan",
+    showlegend: false,
+    paper_bgcolor: "transparent",
+    plot_bgcolor: "transparent",
+    margin: { l: 60, r: 60, t: 20, b: 40 },
+    xaxis: {
+      rangeslider: { visible: false },
+      gridcolor: "#1f2937",
+      rangeselector: {
+        buttons: [
+          { count: 1, label: "1M", step: "month", stepmode: "backward" },
+          { count: 3, label: "3M", step: "month", stepmode: "backward" },
+          { count: 6, label: "6M", step: "month", stepmode: "backward" },
+          { count: 1, label: "YTD", step: "year", stepmode: "todate" },
+          { count: 1, label: "1Y", step: "year", stepmode: "backward" },
+          { step: "all", label: "All" }
+        ]
+      }
+    },
+    yaxis: { gridcolor: "#1f2937", autorange: true },
+    hovermode: "x unified"
+  };
 
-    layout = {
-      dragmode: "pan",
-      showlegend: false,
-      paper_bgcolor: "transparent",
-      plot_bgcolor: "transparent",
-      margin: { l: 60, r: 60, t: 20, b: 40 },
-      xaxis: { rangeslider: { visible: false }, gridcolor: "#1f2937" },
-      yaxis: { gridcolor: "#1f2937" },
-      yaxis2: {
-        overlaying: "y",
-        side: "right",
-        range: [0, maxVol * 4],
-        showgrid: false,
-      },
-    };
-  } else {
-    layout = {
-      dragmode: "pan",
-      showlegend: false,
-      paper_bgcolor: "transparent",
-      plot_bgcolor: "transparent",
-      margin: { l: 60, r: 60, t: 20, b: 40 },
-      xaxis: { rangeslider: { visible: false }, gridcolor: "#1f2937" },
-      yaxis: { gridcolor: "#1f2937" },
+  if (state.showVolume) {
+    layout.yaxis2 = {
+      overlaying: "y",
+      side: "right",
+      autorange: true,
+      showgrid: false
     };
   }
 
-  Plotly.newPlot("chart", data, layout, { responsive: true });
+  Plotly.newPlot("chart", data, layout, { responsive: true, autosize: true });
 }
 
-const fmtDate = (d) => d.toISOString().slice(0, 10);
-
-// ---- Boot -------------------------------------------------------------------
-async function init() {
-  try {
-    el("status").textContent = "Loading CSV…";
-    await loadCSV();
-    buildSlicer();
-    el("status").textContent = `Loaded ${state.tickers.length} tickers`;
-
-    // Auto-select first ticker
-    if (state.tickers.length) {
-      selectTicker(state.tickers[0]);
-    }
-  } catch (err) {
-    console.error(err);
-    el("status").textContent = `Failed to load CSV: ${err?.message || err}`;
-  }
-}
-
+// Run init
 init();
- 
