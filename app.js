@@ -1,3 +1,4 @@
+
 /*  Ticker Candles - GitHub Pages
     - Streams ./stock_data_with_indicators.csv
     - Groups by Ticker
@@ -130,6 +131,10 @@ function plotSelected() {
     });
   }
 
+  // safe volume axis range
+  const volVals = vol.filter(v => v != null);
+  const maxVol = volVals.length ? Math.max(...volVals) : 1;
+
   const layout = {
     dragmode: 'pan',
     showlegend: false,
@@ -141,7 +146,7 @@ function plotSelected() {
     yaxis2: state.showVolume ? {
       overlaying: 'y',
       side: 'right',
-      range: [0, Math.max(...vol.filter(v => v != null), 1) * 4],
+      range: [0, maxVol * 4],
       showgrid: false
     } : undefined
   };
@@ -164,4 +169,3 @@ const fmtDate = (d) => d.toISOString().slice(0, 10);
     console.error(err);
     el('status').textContent = `Failed to load CSV: ${err?.message || err}`;
   }
-}
