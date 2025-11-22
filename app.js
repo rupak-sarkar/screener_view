@@ -26,6 +26,7 @@ function init() {
       state.tickers = [...new Set(state.rows.map(r => r.Ticker))].sort();
       buildTickerSelector();
       plotSelected(state.tickers[0]); // default first ticker
+      el("status").textContent = "Loaded " + state.tickers.length + " tickers";
     }
   });
 
@@ -46,11 +47,17 @@ function init() {
       });
     }
   });
+
+  // Volume checkbox
+  el("showVolume").addEventListener("change", (e) => {
+    state.showVolume = e.target.checked;
+    plotSelected(state.selectedTicker);
+  });
 }
 
-// Build ticker selector
+// Build ticker selector (matches #tickers in HTML)
 function buildTickerSelector() {
-  const selector = el("tickerSelector");
+  const selector = el("tickers");
   selector.innerHTML = "";
   state.tickers.forEach(ticker => {
     const btn = document.createElement("button");
@@ -145,6 +152,10 @@ function plotSelected(ticker) {
   }
 
   Plotly.newPlot("chart", data, layout, { responsive: true, autosize: true });
+
+  // Update header
+  el("title").textContent = ticker;
+  el("dateRange").textContent = x.length ? `${x[0]} → ${x[x.length - 1]}` : "";
 }
 
 // Run init
