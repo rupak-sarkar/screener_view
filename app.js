@@ -36,27 +36,6 @@ function init() {
     }
   });
 
-  // Reset Scale button
-  const resetBtn = el("resetScale");
-  if (resetBtn) {
-    resetBtn.addEventListener("click", () => {
-      Plotly.relayout("chart", {
-        "yaxis.autorange": true,
-        "yaxis2.autorange": true
-      });
-    });
-  }
-
-  // Keyboard shortcut (R)
-  document.addEventListener("keydown", (e) => {
-    if (e.key.toLowerCase() === "r") {
-      Plotly.relayout("chart", {
-        "yaxis.autorange": true,
-        "yaxis2.autorange": true
-      });
-    }
-  });
-
   // Volume checkbox
   const volChk = el("showVolume");
   if (volChk) {
@@ -133,9 +112,9 @@ function plotSelected(ticker) {
     });
   }
 
-  // Layout
+  // Layout with zoom + double-click reset
   let layout = {
-    dragmode: "pan",
+    dragmode: "zoom",   // ✅ zoom by drag/expand
     showlegend: false,
     paper_bgcolor: "transparent",
     plot_bgcolor: "transparent",
@@ -167,7 +146,12 @@ function plotSelected(ticker) {
     };
   }
 
-  Plotly.newPlot("chart", data, layout, { responsive: true });
+  // Config enables pinch-to-zoom + scroll zoom
+  Plotly.newPlot("chart", data, layout, {
+    responsive: true,
+    scrollZoom: true,   // ✅ pinch-to-zoom on touch devices, scroll wheel zoom on desktop
+    displayModeBar: true
+  });
 
   // Update header
   el("title").textContent = ticker;
