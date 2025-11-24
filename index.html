@@ -1,45 +1,90 @@
-<!doctype html>
+
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="UTF-8" />
   <title>Ticker Candles</title>
-  <link rel="stylesheet" href="style.css" />
-  <!-- Plotly for candlesticks -->
-  <script src="https://cdn.plot.ly/plotly-2.30.0.min.js"></script>
-  <!-- PapaParse to stream & parse CSV -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- Plotly.js -->
+  <script src="https://cdn.plot.ly/plotly-2.29.1.min.js"></script>
+
+  <!-- PapaParse -->
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <div id="app">
+    <!-- Sidebar -->
     <aside id="sidebar">
-      <div class="brand">📈 Ticker slicer</div>
-      <input id="search" type="search" placeholder="Search… (e.g., ACC.NS)" />
-      <div id="tickers" role="listbox" aria-label="Tickers"></div>
+      <div class="sidebar-header">
+        <button id="foldBtn" title="Fold/Unfold">☰</button>
+        <div class="brand">Ticker Candles</div>
+      </div>
+
+      <!-- Theme toggle -->
+      <div class="theme-toggle">
+        <span class="theme-label" id="themeLabel">Light Mode</span>
+        <label class="toggle-switch">
+          <input type="checkbox" id="themeSwitch" />
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <!-- BB_Flag dropdown -->
+      <div class="filters">
+        <label class="filter-label" for="bbFlagSelect">Filter by <strong>BB_Flag</strong> (last 7 periods):</label>
+        <select id="bbFlagSelect">
+          <option value="ALL">All tickers</option>
+          <option value="ANY">Any (non‑blank)</option>
+        </select>
+      </div>
+
+      <!-- Search -->
+      <input id="search" type="text" placeholder="Search & select a ticker" />
+      <div id="searchDropdown" class="dropdown" hidden></div>
+
+      <!-- Footer -->
       <div class="footer">
         <label class="checkbox">
-          <input id="showVolume" type="checkbox" checked />
-          <span>Show volume</span>
+          <input type="checkbox" id="showVolume" checked />
+          Show volume
         </label>
       </div>
     </aside>
 
+    <!-- Main -->
     <main id="main">
-      <header id="chartHeader">
-        <h1 id="title">Select a ticker</h1>
-        <div id="dateRange"></div>
-      </header>
-
-      <!-- Chart container (Reset button removed) -->
-      <div id="chartContainer" style="position: relative;">
-        <div id="chart"></div>
+      <div id="chartHeader">
+        <h2 id="title">Select a ticker</h2>
+        <span id="dateRange"></span>
       </div>
 
-      <!-- Status with accessibility -->
-      <div id="status" class="status" aria-live="polite">Loading CSV…</div>
+      <!-- Info strip -->
+      <div id="infoStrip" class="info-strip">
+        <div class="metric"><span class="label">Date</span><span id="m_date">–</span></div>
+        <div class="metric"><span class="label">Open</span><span id="m_open">–</span></div>
+        <div class="metric"><span class="label">High</span><span id="m_high">–</span></div>
+        <div class="metric"><span class="label">Low</span><span id="m_low">–</span></div>
+        <div class="metric"><span class="label">Close</span><span id="m_close">–</span></div>
+        <div class="metric"><span class="label">Δ%</span><span id="m_delta">–</span></div>
+        <div class="metric"><span class="label">Vol</span><span id="m_vol">–</span></div>
+        <div class="metric"><span class="label">SMA22</span><span id="m_sma22">–</span></div>
+        <div class="metric"><span class="label">SMA52</span><span id="m_sma52">–</span></div>
+        <div class="metric"><span class="label">SMA200</span><span id="m_sma200">–</span></div>
+        <div class="metric"><span class="label">BB↑</span><span id="m_bbu">–</span></div>
+        <div class="metric"><span class="label">BB↓</span><span id="m_bbl">–</span></div>
+        <div class="metric"><span class="label">RSI14</span><span id="m_rsi">–</span></div>
+      </div>
+
+      <div id="chart"></div>
+      <div class="status" id="status">Loading CSV…</div>
     </main>
   </div>
 
+  <!-- App logic -->
   <script src="app.js"></script>
 </body>
 </html>
