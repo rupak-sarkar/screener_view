@@ -14,8 +14,8 @@ const state = {
 
 // ===== CSV source =====
 // Use either the remote RAW or the local file (keep one active)
-const CSV_URL = "https://raw.githubusercontent.com/rupak-sarkar/screener_view/main/stock_data_with_indicators.csv";
-// const CSV_URL = "stock_data_with_indicators.csv";
+//const CSV_URL = "https://raw.githubusercontent.com/rupak-sarkar/screener_view/main/stock_data_with_indicators.csv";
+ const CSV_URL = "stock_data_with_indicators.csv";
 
 // ===== Theme switching =====
 function setTheme(isDark) {
