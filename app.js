@@ -13,9 +13,8 @@ const state = {
 };
 
 // ===== CSV source =====
-// Use either the remote RAW or the local file (keep one active)
-//const CSV_URL = "https://raw.githubusercontent.com/rupak-sarkar/screener_view/main/stock_data_with_indicators.csv";
- const CSV_URL = "stock_data_with_indicators.csv";
+// For GitHub Pages: CSV in same folder as index.html
+const CSV_URL = "stock_data_with_indicators.csv";
 
 // ===== Theme switching =====
 function setTheme(isDark) {
@@ -87,6 +86,22 @@ function init() {
 function getBBFlag(row) {
   return row['BB_Flag'] ?? row['BB\\_Flag'] ?? row['BB Flag'] ?? null;
 }
+
+// ===== Date parsing helper =====
+function parseDate(d) {
+  if (!d) return null;
+  if (d instanceof Date && !isNaN(d)) return d;
+  const s = String(d).trim();
+  const norm = s.replace(/\//g, '-');
+  const isoMatch = norm.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (isoMatch) {
+    const y = +isoMatch[1], m = +isoMatch[2], dd = +isoMatch[3];
+    return new Date(y, m - 1, dd);
+  }
+  return new Date(s);
+}
+
+// ===== Populate BB_Flag dropdown =====
 function populateFlags() {
   const set = new Set();
   for (const r of state.rows) {
@@ -103,23 +118,45 @@ function populateFlags() {
     sel.appendChild(o);
   }
 }
+
+// ===== Compute tickers: last 7 calendar days from today =====
 function computeTickers() {
   const allTickers = [...new Set(state.rows.map(r => r.Ticker))].filter(Boolean);
   const out = [];
-  for (const tk of allTickers) {
-    const rows = state.rows
-      .filter(r => r.Ticker === tk)
-      .sort((a,b) => String(a.Date).localeCompare(String(b.Date)));
-    const last7 = rows.slice(-7);
 
-    if (state.selectedFlag === 'ALL') { out.push(tk); continue; }
-    if (state.selectedFlag === 'ANY') {
-      if (last7.some(r => { const v = getBBFlag(r); return v && String(v).trim(); })) out.push(tk);
+  const now = new Date();
+  const cutoff = new Date(now);
+  cutoff.setDate(cutoff.getDate() - 7);
+
+  const inLast7Days = (row) => {
+    const dt = parseDate(row.Date);
+    return dt && dt >= cutoff && dt <= now;
+  };
+
+  for (const tk of allTickers) {
+    const recentRows = state.rows.filter(r => r.Ticker === tk && inLast7Days(r));
+
+    if (state.selectedFlag === 'ALL') {
+      out.push(tk);
       continue;
     }
-    // Specific flag selected: must appear in the last 7 rows
-    if (last7.some(r => { const v = getBBFlag(r); return v && String(v).trim() === state.selectedFlag; })) out.push(tk);
+
+    if (state.selectedFlag === 'ANY') {
+      const hasNonBlank = recentRows.some(r => {
+        const v = getBBFlag(r);
+        return v && String(v).trim() !== '';
+      });
+      if (hasNonBlank) out.push(tk);
+      continue;
+    }
+
+    const matchFlag = recentRows.some(r => {
+      const v = getBBFlag(r);
+      return v && String(v).trim() === state.selectedFlag;
+    });
+    if (matchFlag) out.push(tk);
   }
+
   state.tickers = out.sort();
 }
 
@@ -200,7 +237,6 @@ function plotSelected(ticker) {
   const close = rows.map(r => r.Close);
   const vol   = rows.map(r => r.Volume);
 
-  // Indicators
   const sma200 = col(rows, 'SMA_200');
   const sma52  = col(rows, 'SMA_52');
   const sma22  = col(rows, 'SMA_22');
@@ -211,7 +247,7 @@ function plotSelected(ticker) {
   const series = { x, open, high, low, close, vol, sma22, sma52, sma200, bbU, bbL, rsi14 };
   const data = [];
 
-  // (A) Invisible helper trace to guarantee hover events (no visual change)
+  // Invisible helper trace for hover events
   data.push({
     type: 'scatter',
     x,
@@ -226,7 +262,7 @@ function plotSelected(ticker) {
     yaxis: 'y'
   });
 
-  // (B) Candlestick (solid green/red), tooltips suppressed (we use info strip instead)
+  // Candlestick
   data.push({
     type: 'candlestick', x, open, high, low, close,
     increasing: { line: { color: '#16a34a', width: 1 }, fillcolor: '#16a34a' },
@@ -234,7 +270,6 @@ function plotSelected(ticker) {
     name: 'Price', xaxis: 'x', yaxis: 'y', hoverinfo: 'skip'
   });
 
-  // Volume overlay
   if (state.showVolume) {
     data.push({
       type: 'bar', x, y: vol, marker: { color: '#94a3b8' }, name: 'Volume',
@@ -242,18 +277,15 @@ function plotSelected(ticker) {
     });
   }
 
-  // SMA lines
-  if (sma200.some(v => v != null)) data.push({ type: 'scatter', mode: 'lines', x, y: sma200, line: { color: '#000000', width: 1.5 }, name: 'SMA 200', xaxis: 'x', yaxis: 'y', hoverinfo: 'skip' });
-  if (sma52 .some(v => v != null)) data.push({ type: 'scatter', mode: 'lines', x, y: sma52 , line: { color: '#dc2626', width: 1.5 }, name: 'SMA 52',  xaxis: 'x', yaxis: 'y', hoverinfo: 'skip' });
-  if (sma22 .some(v => v != null)) data.push({ type: 'scatter', mode: 'lines', x, y: sma22 , line: { color: '#16a34a', width: 1.5 }, name: 'SMA 22',  xaxis: 'x', yaxis: 'y', hoverinfo: 'skip' });
+  if (sma200.some(v => v != null)) data.push({ type: 'scatter', mode: 'lines', x, y: sma200, line: { color: '#000000', width: 1.5 }, name: 'SMA 200', hoverinfo: 'skip' });
+  if (sma52.some(v => v != null)) data.push({ type: 'scatter', mode: 'lines', x, y: sma52, line: { color: '#dc2626', width: 1.5 }, name: 'SMA 52', hoverinfo: 'skip' });
+  if (sma22.some(v => v != null)) data.push({ type: 'scatter', mode: 'lines', x, y: sma22, line: { color: '#16a34a', width: 1.5 }, name: 'SMA 22', hoverinfo: 'skip' });
 
-  // Bollinger Band shading
   if (bbU.some(v => v != null) && bbL.some(v => v != null)) {
-    data.push({ type: 'scatter', mode: 'lines', x, y: bbL, line: { color: '#cbd5e1', width: 1 }, name: 'BB Lower', xaxis: 'x', yaxis: 'y', hoverinfo: 'skip' });
-    data.push({ type: 'scatter', mode: 'lines', x, y: bbU, line: { color: '#cbd5e1', width: 1 }, name: 'BB Upper', xaxis: 'x', yaxis: 'y', hoverinfo: 'skip', fill: 'tonexty', fillcolor: 'rgba(148,163,184,0.25)' });
+    data.push({ type: 'scatter', mode: 'lines', x, y: bbL, line: { color: '#cbd5e1', width: 1 }, name: 'BB Lower', hoverinfo: 'skip' });
+    data.push({ type: 'scatter', mode: 'lines', x, y: bbU, line: { color: '#cbd5e1', width: 1 }, name: 'BB Upper', hoverinfo: 'skip', fill: 'tonexty', fillcolor: 'rgba(148,163,184,0.25)' });
   }
 
-  // RSI subplot
   if (rsi14.some(v => v != null)) {
     data.push({ type: 'scatter', mode: 'lines', x, y: rsi14, line: { color: '#0ea5e9', width: 1.5 }, name: 'RSI(14)', xaxis: 'x2', yaxis: 'y3', hoverinfo: 'skip' });
     const rsiAbove = rsi14.map(v => (v != null && v > 70 ? v : null));
@@ -262,18 +294,17 @@ function plotSelected(ticker) {
     data.push({ type: 'scatter', mode: 'markers', x, y: rsiBelow, marker: { color: '#16a34a', size: 5 }, name: '<30', showlegend: false, xaxis: 'x2', yaxis: 'y3', hoverinfo: 'skip' });
   }
 
-  // Layout (preserved) + spikelines
   const layout = {
     dragmode: 'zoom',
-    hovermode: 'x',           // good for spikelines without unified tooltip
+    hovermode: 'x',
     showlegend: true,
     legend: { orientation: 'h', y: 1.02, x: 0 },
     paper_bgcolor: 'transparent',
     plot_bgcolor: 'transparent',
     margin: { l: 60, r: 60, t: 20, b: 40 },
 
-    xaxis:  { domain: [0, 1], rangeslider: { visible: false } },
-    yaxis:  { domain: [0.35, 1], autorange: true },
+    xaxis: { domain: [0, 1], rangeslider: { visible: false } },
+    yaxis: { domain: [0.35, 1], autorange: true },
     yaxis2: { overlaying: 'y', side: 'right', autorange: true, showgrid: false },
     xaxis2: { domain: [0, 1], matches: 'x' },
     yaxis3: { domain: [0, 0.3], range: [0, 100], title: 'RSI(14)' },
@@ -284,25 +315,22 @@ function plotSelected(ticker) {
     ]
   };
 
-  // Thin hairlines (spikelines) on all axes; robust with spikedistance
   const spikeProps = {
     showspikes: true,
     spikemode: 'across',
     spikesnap: 'cursor',
-    spikecolor: '#64748b',    // slate-500
+    spikecolor: '#64748b',
     spikethickness: 0.7,
-    spikedistance: -1         // show spikes even when not near a point
+    spikedistance: -1
   };
-  layout.xaxis  = Object.assign({}, layout.xaxis  || {}, spikeProps);
-  layout.yaxis  = Object.assign({}, layout.yaxis  || {}, spikeProps);
-  layout.xaxis2 = Object.assign({}, layout.xaxis2 || {}, spikeProps);
-  layout.yaxis2 = Object.assign({}, layout.yaxis2 || {}, spikeProps);
-  layout.yaxis3 = Object.assign({}, layout.yaxis3 || {}, spikeProps);
+  layout.xaxis = Object.assign({}, layout.xaxis, spikeProps);
+  layout.yaxis = Object.assign({}, layout.yaxis, spikeProps);
+  layout.xaxis2 = Object.assign({}, layout.xaxis2, spikeProps);
+  layout.yaxis2 = Object.assign({}, layout.yaxis2, spikeProps);
+  layout.yaxis3 = Object.assign({}, layout.yaxis3, spikeProps);
 
-  // Render
   Plotly.newPlot('chart', data, layout, { responsive: true, scrollZoom: true, displayModeBar: true });
 
-  // Info strip behavior
   el('title').textContent = ticker;
   el('dateRange').textContent = x.length ? `${x[0]} → ${x[x.length - 1]}` : '';
 
@@ -313,9 +341,7 @@ function plotSelected(ticker) {
     updateInfoStrip(i, series);
   });
 
-  // Initialize info strip to last candle
   if (x.length) updateInfoStrip(x.length - 1, series);
 }
 
-// Start
 document.addEventListener('DOMContentLoaded', init);
