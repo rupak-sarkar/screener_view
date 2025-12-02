@@ -8,9 +8,9 @@ const state = {
   tickers: [],
   selectedTicker: null,
   showVolume: true,
-  selectedFlag: 'ALL', // BB_Flag filter
-  up20Filter: 'ALL',   // Up_20 filter
-  upTrueFilter: 'ALL', // Up_True filter
+  selectedFlag: 'ALL', // 'ALL' | 'ANY' | specific string
+  up20Filter: 'ALL',   // NEW: 'ALL' | 'TRUE' | 'FALSE'
+  upTrueFilter: 'ALL', // NEW: 'ALL' | 'TRUE' | 'FALSE'
   flags: []
 };
 
@@ -43,7 +43,7 @@ function setTheme(isDark) {
 function init() {
   const themeSwitch = el('themeSwitch');
   if (themeSwitch) themeSwitch.addEventListener('change', e => setTheme(e.target.checked));
-  setTheme(false);
+  setTheme(false); // default Light
 
   Papa.parse(CSV_URL, {
     download: true,
@@ -63,24 +63,34 @@ function init() {
     }
   });
 
-  el('showVolume').addEventListener('change', (e) => {
-    state.showVolume = e.target.checked;
-    if (state.selectedTicker) plotSelected(state.selectedTicker);
-  });
+  const volChk = el('showVolume');
+  if (volChk) {
+    state.showVolume = volChk.checked;
+    volChk.addEventListener('change', (e) => {
+      state.showVolume = e.target.checked;
+      if (state.selectedTicker) plotSelected(state.selectedTicker);
+    });
+  }
 
-  el('bbFlagSelect').addEventListener('change', (e) => {
-    state.selectedFlag = e.target.value;
+  const flagSel = el('bbFlagSelect');
+  flagSel.addEventListener('change', (e) => {
+    state.selectedFlag = e.target.value;        // 'ALL' | 'ANY' | specific
     computeTickers();
     setupSearchDropdown(true);
+    el('status').textContent = `Filter: ${state.selectedFlag} — ${state.tickers.length} tickers`;
   });
 
-  el('up20Select').addEventListener('change', (e) => {
+  // NEW: Up_20 filter dropdown
+  const up20Sel = el('up20Select');
+  up20Sel.addEventListener('change', (e) => {
     state.up20Filter = e.target.value;
     computeTickers();
     setupSearchDropdown(true);
   });
 
-  el('upTrueSelect').addEventListener('change', (e) => {
+  // NEW: Up_True filter dropdown
+  const upTrueSel = el('upTrueSelect');
+  upTrueSel.addEventListener('change', (e) => {
     state.upTrueFilter = e.target.value;
     computeTickers();
     setupSearchDropdown(true);
@@ -124,7 +134,7 @@ function populateFlags() {
   }
 }
 
-// ===== Compute tickers with filters =====
+// ===== Compute tickers: last 7 calendar days from today =====
 function computeTickers() {
   const allTickers = [...new Set(state.rows.map(r => r.Ticker))].filter(Boolean);
   const out = [];
@@ -141,21 +151,21 @@ function computeTickers() {
   for (const tk of allTickers) {
     const recentRows = state.rows.filter(r => r.Ticker === tk && inLast7Days(r));
 
-    // Apply up_20 filter
+    // NEW: Apply up_20 filter
     if (state.up20Filter !== 'ALL') {
       const hasUp20 = recentRows.some(r => String(r.up_20).toLowerCase() === 'true');
       if (state.up20Filter === 'TRUE' && !hasUp20) continue;
       if (state.up20Filter === 'FALSE' && hasUp20) continue;
     }
 
-    // Apply up_true filter
+    // NEW: Apply up_true filter
     if (state.upTrueFilter !== 'ALL') {
       const hasUpTrue = recentRows.some(r => String(r.up_true).toLowerCase() === 'true');
       if (state.upTrueFilter === 'TRUE' && !hasUpTrue) continue;
       if (state.upTrueFilter === 'FALSE' && hasUpTrue) continue;
     }
 
-    // Apply BB_Flag filter
+    // Existing BB_Flag logic
     if (state.selectedFlag === 'ALL') {
       out.push(tk);
       continue;
@@ -219,8 +229,5 @@ function setupSearchDropdown(reset=false) {
   });
   input.addEventListener('blur', () => setTimeout(hide, 150));
 }
-
-// ===== Plot function remains same =====
-// Keep your existing plotSelected() and helpers here
 
 document.addEventListener('DOMContentLoaded', init);
