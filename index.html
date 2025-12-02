@@ -1,79 +1,91 @@
 
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Stock Dashboard</title>
-<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
-<style>
-  body {
-    font-family: Arial, sans-serif;
-    background-color: var(--bg);
-    color: var(--text);
-    margin: 0;
-    padding: 0;
-  }
-  #app {
-    display: flex;
-    flex-direction: row;
-  }
-  .sidebar {
-    width: 250px;
-    background-color: var(--panel);
-    padding: 10px;
-    border-right: 1px solid var(--border);
-  }
-  .filter-group {
-    margin-bottom: 10px;
-  }
-  .filter-group label {
-    display: block;
-    margin-bottom: 5px;
-    font-weight: bold;
-  }
-  select, input {
-    width: 100%;
-    padding: 5px;
-    margin-bottom: 10px;
-  }
-  #chart {
-    flex: 1;
-    padding: 10px;
-  }
-  .dropdown-item {
-    padding: 5px;
-    cursor: pointer;
-  }
-  .dropdown-item:hover {
-    background-color: var(--accent);
-    color: #fff;
-  }
-</style>
+  <meta charset="UTF-8" />
+  <title>Ticker Candles</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- Plotly.js -->
+  <script src="https://cdn.plot.ly/plotly-2.29.1.min.js"></script>
+
+  <!-- PapaParse -->
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div id="app">
-  <div class="sidebar">
-    <h3>Filters</h3>
-    <div class="filter-group">
-      <label for="bbFlagSelect">BB_Flag Filter:</label>
-      <select id="bbFlagSelect"></select>
-    </div>
-    <div class="filter-group">
-      <label for="search">Search Ticker:</label>
-      <input type="text" id="search" placeholder="Type ticker...">
-      <div id="searchDropdown" style="border:1px solid var(--border); background:#fff; position:absolute; width:90%; max-height:150px; overflow:auto;" hidden></div>
-    </div>
-    <div class="filter-group">
-      <input type="checkbox" id="showVolume" checked> Show Volume
-    </div>
-    <div class="filter-group">
-      <input type="checkbox" id="themeSwitch"> Dark Mode <span id="themeLabel"></span>
-    </div>
-    <div id="status" style="margin-top:10px; font-size:14px;"></div>
+  <div id="app">
+    <!-- Sidebar -->
+    <aside id="sidebar">
+      <div class="sidebar-header">
+        <button id="foldBtn" title="Fold/Unfold">☰</button>
+        <div class="brand">Ticker Candles</div>
+      </div>
+
+      <!-- Theme toggle -->
+      <div class="theme-toggle">
+        <span class="theme-label" id="themeLabel">Light Mode</span>
+        <label class="toggle-switch">
+          <input type="checkbox" id="themeSwitch" />
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <!-- BB_Flag dropdown -->
+      <div class="filters">
+        <label class="filter-label" for="bbFlagSelect">Filter by <strong>BB_Flag</strong> (last 7 periods):</label>
+        <select id="bbFlagSelect">
+          <option value="ALL">All tickers</option>
+          <option value="ANY">Any (non‑blank)</option>
+        </select>
+      </div>
+
+      <!-- Search -->
+      <input id="search" type="text" placeholder="Search & select a ticker" />
+      <div id="searchDropdown" class="dropdown" hidden></div>
+
+      <!-- Footer -->
+      <div class="footer">
+        <label class="checkbox">
+          <input type="checkbox" id="showVolume" checked />
+          Show volume
+        </label>
+      </div>
+    </aside>
+
+    <!-- Main -->
+    <main id="main">
+      <div id="chartHeader">
+        <h2 id="title">Select a ticker</h2>
+        <span id="dateRange"></span>
+      </div>
+
+      <!-- Info strip -->
+      <div id="infoStrip" class="info-strip">
+        <div class="metric"><span class="label">Date</span><span id="m_date">–</span></div>
+        <div class="metric"><span class="label">Open</span><span id="m_open">–</span></div>
+        <div class="metric"><span class="label">High</span><span id="m_high">–</span></div>
+        <div class="metric"><span class="label">Low</span><span id="m_low">–</span></div>
+        <div class="metric"><span class="label">Close</span><span id="m_close">–</span></div>
+        <div class="metric"><span class="label">Δ%</span><span id="m_delta">–</span></div>
+        <div class="metric"><span class="label">Vol</span><span id="m_vol">–</span></div>
+        <div class="metric"><span class="label">SMA22</span><span id="m_sma22">–</span></div>
+        <div class="metric"><span class="label">SMA52</span><span id="m_sma52">–</span></div>
+        <div class="metric"><span class="label">SMA200</span><span id="m_sma200">–</span></div>
+        <div class="metric"><span class="label">BB↑</span><span id="m_bbu">–</span></div>
+        <div class="metric"><span class="label">BB↓</span><span id="m_bbl">–</span></div>
+        <div class="metric"><span class="label">RSI14</span><span id="m_rsi">–</span></div>
+      </div>
+
+      <div id="chart"></div>
+      <div class="status" id="status">Loading CSV…</div>
+    </main>
   </div>
-  <div id="chart"></div>
-</div>
-<script src="app.js"></script>
+
+  <!-- App logic -->
+  <script src="app.js"></script>
 </body>
+</html>
