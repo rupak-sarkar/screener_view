@@ -345,5 +345,3 @@ function plotSelected(ticker) {
 }
 
 document.addEventListener('DOMContentLoaded', init);
-
-
