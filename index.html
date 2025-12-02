@@ -56,10 +56,14 @@
 <div id="app">
   <div class="sidebar">
     <h3>Filters</h3>
+    
+    <!-- BB_Flag Filter -->
     <div class="filter-group">
       <label for="bbFlagSelect">BB_Flag Filter:</label>
       <select id="bbFlagSelect"></select>
     </div>
+    
+    <!-- NEW: Up_20 Filter -->
     <div class="filter-group">
       <label for="up20Select">Up_20 Filter:</label>
       <select id="up20Select">
@@ -68,6 +72,8 @@
         <option value="FALSE">False</option>
       </select>
     </div>
+    
+    <!-- NEW: Up_True Filter -->
     <div class="filter-group">
       <label for="upTrueSelect">Up_True Filter:</label>
       <select id="upTrueSelect">
@@ -76,21 +82,32 @@
         <option value="FALSE">False</option>
       </select>
     </div>
+    
+    <!-- Ticker Search -->
     <div class="filter-group">
       <label for="search">Search Ticker:</label>
       <input type="text" id="search" placeholder="Type ticker...">
       <div id="searchDropdown" style="border:1px solid var(--border); background:#fff; position:absolute; width:90%; max-height:150px; overflow:auto;" hidden></div>
     </div>
+    
+    <!-- Show Volume -->
     <div class="filter-group">
       <input type="checkbox" id="showVolume" checked> Show Volume
     </div>
+    
+    <!-- Theme Switch -->
     <div class="filter-group">
       <input type="checkbox" id="themeSwitch"> Dark Mode <span id="themeLabel"></span>
     </div>
+    
     <div id="status" style="margin-top:10px; font-size:14px;"></div>
   </div>
+  
+  <!-- Chart Area -->
   <div id="chart"></div>
 </div>
+
+<!-- Link to JS -->
 <script src="app.js"></script>
 </body>
 </html>
