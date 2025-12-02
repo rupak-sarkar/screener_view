@@ -143,6 +143,7 @@ df_extended = df_extended.groupby('Ticker').apply(compute_knoxville_divergence).
 df_extended['gain'] = ((df_extended['Close'] - df_extended['Open']) / df_extended['Open']) * 100
 df_extended['up_20'] = False
 
+# Calculate up_20 per ticker
 for ticker, group in df_extended.groupby('Ticker'):
     for i in range(len(group)):
         idx = group.index[i]
@@ -160,16 +161,14 @@ for ticker, group in df_extended.groupby('Ticker'):
             if all(last_three['Close'] > last_three['Open']) and last_three['gain'].sum() > 20:
                 df_extended.loc[idx, 'up_20'] = True
 
-# up_true flag
+# up_true per ticker: if any up_20 True in last 7 calendar days
+seven_days_ago = pd.Timestamp(today) - pd.Timedelta(days=7)
 df_extended['up_true'] = False
+
 for ticker, group in df_extended.groupby('Ticker'):
-    for i in range(len(group)):
-        idx = group.index[i]
-        start_idx = max(0, i-6)
-        if group.iloc[start_idx:i+1]['up_20'].any():
-            df_extended.loc[idx, 'up_true'] = True
+    recent_up20_exists = group[(group['Date'] >= seven_days_ago) & (group['up_20'] == True)].shape[0] > 0
+    df_extended.loc[group.index, 'up_true'] = recent_up20_exists
 
 # ---- STEP 8: Save to CSV ----
 df_extended.to_csv("stock_data_with_indicators.csv", index=False)
 
-print("✅ All indicators and new flags (up_20, up_true) added successfully!")
