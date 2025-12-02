@@ -161,8 +161,8 @@ for ticker, group in df_extended.groupby('Ticker'):
             if all(last_three['Close'] > last_three['Open']) and last_three['gain'].sum() > 17:
                 df_extended.loc[idx, 'up_20'] = True
 
-# up_true per ticker: if any up_20 True in last 7 calendar days
-seven_days_ago = pd.Timestamp(today) - pd.Timedelta(days=15)
+# up_true per ticker: if any up_20 True in last 25 calendar days
+seven_days_ago = pd.Timestamp(today) - pd.Timedelta(days=25)
 df_extended['up_true'] = False
 
 for ticker, group in df_extended.groupby('Ticker'):
